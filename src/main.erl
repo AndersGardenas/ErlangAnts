@@ -12,7 +12,7 @@
 %% API
 -export([main/0,run/0]).
 -import( map, [new/4,get_width/1,get_height/1,set/4,get/3,get_xmin/1,get_xmax/1,get_ymin/1,get_ymax/1]).
--import( ant, [newAnt/3,update/1,setXDir/2,setYDir/2]).
+-import(ants,[new/3,udatet/3]).
 
 main() ->
   %% Node = node("clientNode"),
@@ -97,20 +97,22 @@ send_message(Pid,TimeDif)->
 
 %Attns
 ants(Pid,N,X,Y,Map,JavaPid)->
-  Ants =  [ {X,Y} || _ <- lists:duplicate(N,1)],
-  AntsInfo =  [ ant:newAnt(rand:uniform()*2 -1,rand:uniform()*2 -1,1) || _ <- lists:duplicate(N,1)],
-  ants(Pid,Ants,AntsInfo,Map,JavaPid).
-ants(Pid,Ants,AntsInfos,Map,JavaPid)->
+
+  Ants = ants:new(N,X,Y),
+
+  ants(Pid,Ants,Map,JavaPid).
+ants(Pid,Ants,Map,JavaPid)->
 
   receive {Ref,Time} ->
-    NewAnts = [newPath(X,Y,AntsInfo,Map,Time) || {X,Y} <- Ants, AntsInfo <- AntsInfos],
-    JavaPid ! NewAnts,
+    NewAnts = ants:udatet(Ants,Time,Map),
+    {NewAntsPos,_} = NewAnts,
+    JavaPid ! NewAntsPos,
     Pid ! Ref
   after 10000 ->
     NewAnts = null,
     throw("out of time ")
   end,
-  ants(Pid,NewAnts,AntsInfos,Map,JavaPid).
+  ants(Pid,NewAnts,Map,JavaPid).
 
 
 
