@@ -11,8 +11,8 @@
 
 %% API
 -export([main/0,run/0]).
--import( map, [new/4,get_width/1,get_height/1,set/4,get/3,get_xmin/1,get_xmax/1,get_ymin/1,get_ymax/1]).
--import(ants,[new/3,udatet/3]).
+-import( map, [new/5,get_width/1,get_height/1,set/4,get/3,get_xmin/1,get_xmax/1,get_ymin/1,get_ymax/1]).
+-import(ants,[new/3,update/3]).
 
 main() ->
   %% Node = node("clientNode"),
@@ -55,7 +55,7 @@ run(N)->
 
   %Init world
 
-  Map =map:new(-WorldMax,WorldMax,-WorldMax,WorldMax),
+  Map =map:new(-WorldMax,WorldMax,-WorldMax,WorldMax,[5,5]),
   StartX = 0.0,
   StartY = 0.0,
   Self = self(),
@@ -104,7 +104,7 @@ ants(Pid,N,X,Y,Map,JavaPid)->
 ants(Pid,Ants,Map,JavaPid)->
 
   receive {Ref,Time} ->
-    NewAnts = ants:udatet(Ants,Time,Map),
+    NewAnts = ants:update(Ants,Map,Time),
     {NewAntsPos,_} = NewAnts,
     JavaPid ! NewAntsPos,
     Pid ! Ref

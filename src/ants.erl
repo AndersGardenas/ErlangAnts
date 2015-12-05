@@ -10,9 +10,9 @@
 -author("anders").
 
 %% API
--export([new/3,udatet/3]).
--import( ant, [newAnt/3,update/1,setXDir/2,setYDir/2]).
-
+-export([new/3,update/3]).
+-import( ant, [newAnt/3,update/2,setXDir/2,setYDir/2,looking_for_food/1]).
+-import(map,[close_to_food/3]).
 
 
 new(N,X,Y)->
@@ -20,18 +20,18 @@ new(N,X,Y)->
   AntsInfo =  [ ant:newAnt(rand:uniform()*2 -1,rand:uniform()*2 -1,1) || _ <- lists:duplicate(N,1)],
   {Ants,AntsInfo}.
 
-udatet(Ant,Time,Map)->
-  {AntPos,AntInfo} = Ant,
-  {update(Ant,[],Time,Map),AntInfo}.
-update(Ant,NewAntPos,Time,Map)->
+update(Ant,Map,Time)->
+  {_,AntInfo} = Ant,
+  {update(Ant,[],Map,Time),AntInfo}.
+update(Ant,OldAntPos,Map,Time)->
   {A,AntPos,I,AntInfo} = getNext(Ant),
 
-  {X,Y} = AntPos,
-  NewAntPos = NewAntPos + newPath(X,Y,I,Map,Time),
+  {X,Y} = A,
+  NewAntPos =  [newPath(X,Y,I,Map,Time)] ++ OldAntPos,
   if AntPos == [] ->
     NewAntPos;
     true ->
-      update({AntPos,AntInfo,NewAntPos,Map,Time})
+      update({AntPos,AntInfo},NewAntPos,Map,Time)
   end.
 
 
@@ -39,12 +39,13 @@ update(Ant,NewAntPos,Time,Map)->
 
 
 getNext(Ant)->
-{[A|AntPos],[I,AntInfo]} = Ant,
+{[A|AntPos],[I|AntInfo]} = Ant,
 {A,AntPos,I,AntInfo}.
 
 
 newPath(X,Y,AntInfo,Map,Time)->
-  ant:update(AntInfo),
+  ant:update(X,Y,AntInfo,Map,Time),
+
 
   XDir = ant:getXDir(AntInfo),
   YDir = ant:getYDir(AntInfo),
