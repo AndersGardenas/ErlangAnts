@@ -11,7 +11,7 @@
 
 
 %% API
--export( [create/2, get/4, set/5 ]).
+-export( [create/2, get/4, set/5,size/1 ]).
 
 create( X, Y ) -> array:new(X * Y ).
 

@@ -11,8 +11,8 @@
 
 %% API
 -export([main/0,run/0]).
--import( map, [new/5,get_width/1,get_height/1,set/4,get/3,get_xmin/1,get_xmax/1,get_ymin/1,get_ymax/1]).
--import(ants,[new/3,update/3]).
+-import( map, [new/8,update/2]).
+-import(ants,[new/ 3,update/3]).
 
 main() ->
   %% Node = node("clientNode"),
@@ -51,13 +51,14 @@ run(N)->
   end,
 
 
-
+  ets:new(hive,[set,named_table]),
+  ets:new(food,[set,named_table]),
 
   %Init world
-
-  Map =map:new(-WorldMax,WorldMax,-WorldMax,WorldMax,[5,5]),
   StartX = 0.0,
   StartY = 0.0,
+  Map =map:new(-WorldMax,WorldMax,-WorldMax,WorldMax,[{20,20}],[{StartX,StartY}],hive,food),
+
   Self = self(),
   NrActors = NrAnts / N,
 
@@ -72,7 +73,7 @@ run(Pids,Map,OldTime,MasterPid) ->
     FinalTime = OldTime;
     true ->
       FinalTime = NewTime,
-      io:format("FPS ~p \n", [1/TimeDif]),
+      %io:format("FPS ~p \n", [1/TimeDif]),
 
 
 
@@ -84,7 +85,9 @@ run(Pids,Map,OldTime,MasterPid) ->
             ok
           end
         end
-        ,Refs)
+        ,Refs),
+      %Mutebull object shod not store result
+      map:update(Map,TimeDif)
   end,
   run(Pids,Map,FinalTime,MasterPid).
 

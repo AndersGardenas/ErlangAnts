@@ -11,27 +11,29 @@
 
 %% API
 -export([new/3,update/3]).
--import( ant, [newAnt/3,update/2,setXDir/2,setYDir/2,looking_for_food/1]).
+-import( ant, [newAnt/2,update/2,setXDir/2,setYDir/2,looking_for_food/1]).
 -import(map,[close_to_food/3]).
 
 
 new(N,X,Y)->
   Ants =  [ {X,Y} || _ <- lists:duplicate(N,1)],
-  AntsInfo =  [ ant:newAnt(rand:uniform()*2 -1,rand:uniform()*2 -1,1) || _ <- lists:duplicate(N,1)],
+  AntsInfo =  [ ant:newAnt(rand:uniform()*2 -1,rand:uniform()*2 -1) || _ <- lists:duplicate(N,1)],
   {Ants,AntsInfo}.
 
 update(Ant,Map,Time)->
-  {_,AntInfo} = Ant,
-  {update(Ant,[],Map,Time),AntInfo}.
-update(Ant,OldAntPos,Map,Time)->
-  {A,AntPos,I,AntInfo} = getNext(Ant),
+  update(Ant,{[],[]},Map,Time).
+update(Ant,{AntPos,AtomInfo},Map,Time)->
+  {A,OldAntPos,I,OldAtomInfo} = getNext(Ant),
 
   {X,Y} = A,
-  NewAntPos =  [newPath(X,Y,I,Map,Time)] ++ OldAntPos,
-  if AntPos == [] ->
-    NewAntPos;
+  {Pos,Info} = newPath(X,Y,I,Map,Time),
+  NewAntPos =  [Pos] ++ AntPos,
+  NewAntInfo = [Info] ++ AtomInfo,
+
+  if OldAntPos == [] ->
+    {NewAntPos,NewAntInfo};
     true ->
-      update({AntPos,AntInfo},NewAntPos,Map,Time)
+      update({OldAntPos,OldAtomInfo},{NewAntPos,NewAntInfo},Map,Time)
   end.
 
 
@@ -44,13 +46,13 @@ getNext(Ant)->
 
 
 newPath(X,Y,AntInfo,Map,Time)->
-  ant:update(X,Y,AntInfo,Map,Time),
+  NewAntInfo = ant:update(X,Y,AntInfo,Map,Time),
 
-
-  XDir = ant:getXDir(AntInfo),
-  YDir = ant:getYDir(AntInfo),
-  NewX = X + XDir*Time,
-  NewY = Y + YDir*Time,
+  Speed = 10,
+  XDir = ant:getXDir(NewAntInfo),
+  YDir = ant:getYDir(NewAntInfo),
+  NewX = X + XDir*Time*Speed,
+  NewY = Y + YDir*Time*Speed,
 
   %if the values are out of bound
   XMim = map:get_xmin(Map),
@@ -60,24 +62,24 @@ newPath(X,Y,AntInfo,Map,Time)->
   YMax = map:get_ymax(Map),
 
   if NewX >=  XMax ->
-    AnsX = XMax,
-    ant:setXDir(AntInfo,-XDir);
+    AnsX = XMax;
+   % ant:setXDir(NewAntInfo,-XDir);
     NewX <  XMim ->
-      AnsX = XMim,
-      ant:setXDir(AntInfo,-XDir);
+      AnsX = XMim;
+    %  ant:setXDir(NewAntInfo,-XDir);
     true ->
       AnsX = NewX
   end,
   if NewY >=  YMax ->
-    AnsY = YMax,
-    ant:setYDir(AntInfo,-YDir);
+    AnsY = YMax;
+    %ant:setYDir(NewAntInfo,-YDir);
     NewY <  YMin ->
-      AnsY = YMin,
-      ant:setYDir(AntInfo,-YDir);
+      AnsY = YMin;
+     % ant:setYDir(NewAntInfo,-YDir);
     true ->
       AnsY = NewY
   end,
 
-  {AnsX, AnsY}.
+  {{AnsX, AnsY},NewAntInfo}.
 
 

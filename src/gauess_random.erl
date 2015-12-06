@@ -6,7 +6,7 @@
 %%% @end
 %%% Created : 04. Dec 2015 19:51
 %%%-------------------------------------------------------------------
--module(normal_random).
+-module(gauess_random).
 
 
 %% API
