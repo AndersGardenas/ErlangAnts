@@ -19,7 +19,9 @@
 -record(map,{xmin,xmax,ymin,ymax,width,height,food,hive,
   hivePheromon,foodPheromon}).
 
-%%-define (Map,#map).
+-define(HIVESIZE,5*5).
+-define(PHEROMONLIFETIME,200).
+-define(MAXEMUMSTRENGTH,50).
 
 new(Xmin, Xmax,Ymin,Ymax,Food,Hive,HivePheromon,FoodPheromon) ->
 
@@ -40,13 +42,14 @@ updateTable(Name,Key,DeltaT)->
   if Key == '$end_of_table' ->
     ok;
     true ->
+      %Update counter wood be faster but doesent work, only takes integer
       [{_,_,Time}] = ets:lookup(Name,Key),
-
-      ets:update_element(Name,Key,{3,Time+DeltaT}),
-      if Time+DeltaT > 50 ->
+      %Remove phoromon if its old
+      if Time+DeltaT > ?PHEROMONLIFETIME ->
         updateTable(Name,ets:next(Name,Key),DeltaT),
         ets:delete(Name,Key);
         true ->
+          ets:update_element(Name,Key,{3,Time+DeltaT}),
           updateTable(Name,ets:next(Name,Key),DeltaT)
       end
   end.
@@ -59,13 +62,12 @@ addFoodPheromon(Map,X,Y,Time) ->
   addPheromon(Map#map.foodPheromon,round(X),round(Y),Time).
 
 addPheromon(Table,X,Y,Time)->
-  Strength = 50 - Time,
-  %Only add if the Phereomon is stronger
+  Strength = ?MAXEMUMSTRENGTH - Time,
+  %Only add if the Pheromon is stronger
   Ans = ets:lookup(Table,{X,Y}),
+
   if Ans /= [] ->
-
-
-    {_,OldStrength,_}=hd(Ans),
+    [{_,OldStrength,_}]= Ans,
     if Strength >= OldStrength ->
       ets:insert(Table,{{X,Y},Strength,0});
       true ->
@@ -90,11 +92,11 @@ close_to_hive(Map,X,Y)->
 close_to(_,_,[])->
   false;
 close_to(X,Y,[{FX,FY}|Food])->
-  Size = 5*5,
+
   XDist = X-FX,
   YDist = Y-FY,
   Dist = XDist*XDist+YDist*YDist,
-  if Dist < Size ->
+  if Dist < ?HIVESIZE ->
     {FX,FY};
     true ->
       close_to(X,Y,Food)
@@ -125,7 +127,6 @@ dir([HD|TL],OldStrength,XYPos) ->
 get_neighbours(Table,Xin,Yin)->
   X = round(Xin),
   Y = round(Yin),
-
   ets:lookup(Table,{(X+1),(Y-1)}) ++ ets:lookup(Table,{(X-1),(Y+1)}) ++ ets:lookup(Table,{(X),(Y+1)}) ++
     ets:lookup(Table,{(X+1),(Y+1)}) ++ ets:lookup(Table,{(X-1),(Y-1)}) ++ ets:lookup(Table,{(X),(Y-1)}) ++
     ets:lookup(Table,{(X+1),(Y)}) ++ ets:lookup(Table,{(X-1),(Y)}).
