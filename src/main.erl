@@ -23,10 +23,8 @@ main() ->
 
 
 
-%Start the function
+
 run()->
-  run(10).
-run(N)->
   WaintTime = 10000,
   io:format("Run has started \n"),
   receive {masterPid,MasterPid} ->
@@ -44,6 +42,7 @@ run(N)->
   end,
 
 
+
   receive {worldMax,WorldMax} ->
     io:format("Recived WorldMax ~p  \n", [WorldMax])
   after WaintTime ->
@@ -51,44 +50,65 @@ run(N)->
   end,
 
 
-  ets:new(hive,[set,named_table]),
-  ets:new(food,[set,named_table]),
+  receive {start,Start} ->
+    io:format("Recived Start ~p  \n", [Start])
+  after WaintTime ->
+    Start = 10.0
+  end,
+
+  receive {nrActors,N} ->
+    io:format("Recived WorldMax ~p  \n", [N])
+  after WaintTime ->
+    N = 10
+  end,
+
+
+
+  ets:new(hive,[set,named_table,public]),
+  ets:new(food,[set,named_table,public]),
+
 
   %Init world
-  StartX = 0.0,
-  StartY = 0.0,
-  Map =map:new(-WorldMax,WorldMax,-WorldMax,WorldMax,[{20,20}],[{StartX,StartY}],hive,food),
+  StartX = Start,
+  StartY = Start,
+  Map = map:new(0,WorldMax,0,WorldMax,[{StartX +80,StartY + 80}],[{StartX,StartY}],hive,food),
 
   Self = self(),
-  NrActors = NrAnts / N,
+  NrActors = max(NrAnts / N,1),
 
   io:format("Number of actors is ~p  \n", [NrActors]),
   Pids = [spawn_link(fun () -> ants(Self,N,StartX,StartY,Map,MasterPid) end) || _ <- lists:duplicate(trunc(NrActors),1)],
 
-  run(Pids,Map,now(),MasterPid).
+  run(Pids,Map, erlang:timestamp(),MasterPid).
 run(Pids,Map,OldTime,MasterPid) ->
-  NewTime = now(),
-  TimeDif = timer:now_diff(NewTime,OldTime)/1000000,
-  if(TimeDif < 1/60)->
-    FinalTime = OldTime;
+  FPS = 1/60,
+
+  NewTime =erlang:timestamp(),
+  %%To second
+  FirstTimeDif = timer:now_diff(NewTime,OldTime)/1000000,
+  if(FirstTimeDif < FPS)->
+    timer:sleep(round(FPS*1000 -FirstTimeDif*1000));
     true ->
-      FinalTime = NewTime,
-      %io:format("FPS ~p \n", [1/TimeDif]),
-
-
-
-      %update all ants
-      Refs = [send_message(Pid,TimeDif) || Pid <- Pids],
-      lists:foreach(
-        fun (Ref) ->
-          receive Ref ->
-            ok
-          end
-        end
-        ,Refs),
-      %Mutebull object shod not store result
-      map:update(Map,TimeDif)
+      ok
   end,
+  FinalTime = erlang:timestamp(),
+  TimeDif = timer:now_diff(FinalTime,OldTime)/1000000,
+  %io:format("FPS ~p \n", [1/TimeDif]),
+
+
+
+  %update all ants
+  Refs = [send_message(Pid,TimeDif) || Pid <- Pids],
+  lists:foreach(
+    fun (Ref) ->
+      receive Ref ->
+        ok
+      end
+    end
+    ,Refs),
+%Mutebull object shod not store result
+  map:update(Map,TimeDif),
+
   run(Pids,Map,FinalTime,MasterPid).
 
 %Send a maesge to a Ant
@@ -100,7 +120,6 @@ send_message(Pid,TimeDif)->
 
 %Attns
 ants(Pid,N,X,Y,Map,JavaPid)->
-
   Ants = ants:new(N,X,Y),
 
   ants(Pid,Ants,Map,JavaPid).

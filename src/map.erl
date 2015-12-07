@@ -17,7 +17,7 @@
   get_height/1,get_width/1]).
 
 -record(map,{xmin,xmax,ymin,ymax,width,height,food,hive,
-  hivePheromon,foodPheromon,hivePheromonStrength,foodPheromonStrength}).
+  hivePheromon,foodPheromon}).
 
 %%-define (Map,#map).
 
@@ -40,38 +40,39 @@ updateTable(Name,Key,DeltaT)->
   if Key == '$end_of_table' ->
     ok;
     true ->
-      [{XY,Strength,Time}] = ets:lookup(Name,Key),
+      [{_,_,Time}] = ets:lookup(Name,Key),
 
-
-      {_,_,NewTime} = ets:update_element(Name,Key,{XY,Strength,Time+DeltaT}),
-      if NewTime > 100 ->
+      ets:update_element(Name,Key,{3,Time+DeltaT}),
+      if Time+DeltaT > 50 ->
+        updateTable(Name,ets:next(Name,Key),DeltaT),
         ets:delete(Name,Key);
         true ->
-          ok
-      end,
-      updateTable(Name,ets:next(Name,Key),DeltaT)
+          updateTable(Name,ets:next(Name,Key),DeltaT)
+      end
   end.
 
 
 addHivePheromon(Map,X,Y,Time) ->
-  addPheromon(Map#map.hivePheromon,X,Y,Time).
+  addPheromon(Map#map.hivePheromon,round(X),round(Y),Time).
 
 addFoodPheromon(Map,X,Y,Time) ->
-  addPheromon(Map#map.foodPheromon,X,Y,Time).
+  addPheromon(Map#map.foodPheromon,round(X),round(Y),Time).
 
 addPheromon(Table,X,Y,Time)->
-  Strength = 100 - Time,
+  Strength = 50 - Time,
   %Only add if the Phereomon is stronger
-  Ans = ets:lookup(Table,X*Y),
+  Ans = ets:lookup(Table,{X,Y}),
   if Ans /= [] ->
-    {_,OldStrength,_}=tl(Ans),
-    if Strength > OldStrength ->
-      ets:insert(Table,{X*Y,Strength,0});
+
+
+    {_,OldStrength,_}=hd(Ans),
+    if Strength >= OldStrength ->
+      ets:insert(Table,{{X,Y},Strength,0});
       true ->
         ok
     end;
     true ->
-      ok
+      ets:insert(Table,{{X,Y},Strength,0})
   end.
 
 
@@ -89,10 +90,11 @@ close_to_hive(Map,X,Y)->
 close_to(_,_,[])->
   false;
 close_to(X,Y,[{FX,FY}|Food])->
+  Size = 5*5,
   XDist = X-FX,
   YDist = Y-FY,
   Dist = XDist*XDist+YDist*YDist,
-  if Dist < 4 ->
+  if Dist < Size ->
     {FX,FY};
     true ->
       close_to(X,Y,Food)
@@ -100,38 +102,46 @@ close_to(X,Y,[{FX,FY}|Food])->
 
 
 home_dir(Map,X,Y)->
-  dir(X,Y,get_neighbours(Map#map.hivePheromon,X,Y),0,false,Map#map.height).
+  dir(get_neighbours(Map#map.hivePheromon,X,Y),0,false).
 
 food_dir(Map,X,Y)->
-  dir(X,Y,get_neighbours(Map#map.foodPheromon,X,Y),0,false,Map#map.height).
+  dir(get_neighbours(Map#map.foodPheromon,X,Y),0,false).
 
-dir(_,_,[],_,XYPos,MapHeight)->
+dir([],_,XYPos)->
   if XYPos == false ->
     false;
     true ->
-      {XYPos/MapHeight,XYPos rem MapHeight}
+      XYPos
   end;
-dir(X,Y,[HD|TL],OldStrength,XYPos,MapHeight) ->
+dir([HD|TL],OldStrength,XYPos) ->
   {XY,Strength,_} = HD,
-
   if OldStrength < Strength ->
-    dir(X,Y,TL,Strength,XY,MapHeight);
+    dir(TL,Strength,XY);
     true ->
-      dir(X,Y,TL,OldStrength,XYPos,MapHeight)
+      dir(TL,OldStrength,XYPos)
   end.
 
 
-get_neighbours(Table,X,Y)->
-  ets:lookup(Table,{(X+1)*(Y-1)}) ++ ets:lookup(Table,{(X)*(Y-1)}) ++ ets:lookup(Table,{(X-1)*(Y-1)}) ++
-    ets:lookup(Table,{(X+1)*(Y+1)}) ++ ets:lookup(Table,{(X)*(Y+1)}) ++ ets:lookup(Table,{(X-1)*(Y+1)}) ++
-    ets:lookup(Table,{(X+1)*(Y)}) ++ ets:lookup(Table,{(X+1)*(Y)}).
+get_neighbours(Table,Xin,Yin)->
+  X = round(Xin),
+  Y = round(Yin),
+
+  ets:lookup(Table,{(X+1),(Y-1)}) ++ ets:lookup(Table,{(X-1),(Y+1)}) ++ ets:lookup(Table,{(X),(Y+1)}) ++
+    ets:lookup(Table,{(X+1),(Y+1)}) ++ ets:lookup(Table,{(X-1),(Y-1)}) ++ ets:lookup(Table,{(X),(Y-1)}) ++
+    ets:lookup(Table,{(X+1),(Y)}) ++ ets:lookup(Table,{(X-1),(Y)}).
 
 
 
-
-
-
-
+forAll(Name)->
+  forAll(Name,ets:first(Name)).
+forAll(Name,Key)->
+  if Key == '$end_of_table' ->
+    io:format("\n"),
+    [];
+    true ->
+      io:format("Print key ~p ", [Key]),
+      ets:lookup(Name,Key) ++ forAll(Name,ets:next(Name,Key))
+  end.
 
 
 

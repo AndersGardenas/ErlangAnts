@@ -10,7 +10,7 @@
 -author("anders").
 
 %% API
--export([newAnt/2,update/5,getXDir/1,getYDir/1,setXDir/2,setYDir/2,
+-export([newAnt/2,update/5,getXDir/1,getYDir/1,setDir/3,
   looking_for_food/1]).
 -import(gauess_random,[get_number/0]).
 -import(map,[close_to_food/3,close_to_hive/3,home_dir/3,food_dir/3,
@@ -21,8 +21,8 @@ newAnt(XDir,YDir) ->
   #ant{xDir = XDir,yDir = YDir,time = 0, fromHive = true,pheromonTimer = 0}.
 
 update(X,Y,Ant,Map,Time)->
-  %NewTime = Ant#ant:time - TimeDif,
-
+  IgnoringPheromonChanse = 0.75,
+  IgnoringPheromon = rand:uniform(),
   Looking_for_food = ant:looking_for_food(Ant),
   OldTime = Ant#ant.time,
 
@@ -35,7 +35,7 @@ update(X,Y,Ant,Map,Time)->
       Dir =  map:food_dir(Map,X,Y),
 
       %found food phoromon?
-      if Dir == false ->
+      if (Dir == false) or (IgnoringPheromon > IgnoringPheromonChanse)  ->
         {XDir,YDir} = randomDir(Ant);
         true ->
           {FoodXDir,FoodYDir} = Dir,
@@ -44,7 +44,7 @@ update(X,Y,Ant,Map,Time)->
       end;
     %Found the food source
       true ->
-        io:format("has food \n"),
+
         {XDir,YDir} = randomDir(Ant),
         NewTime = 0,
         FromHive = false
@@ -58,7 +58,7 @@ update(X,Y,Ant,Map,Time)->
         FromHive = false,
         Dir =  map:home_dir(Map,X,Y),
 
-        if Dir == false ->
+        if (Dir == false) or (IgnoringPheromon < IgnoringPheromonChanse) ->
           {XDir,YDir} = randomDir(Ant);
           true ->
             {HomeXDir,HomeYDir} = Dir,
@@ -67,7 +67,6 @@ update(X,Y,Ant,Map,Time)->
         end;
 
         true ->
-          io:format("has hive  \n"),
           {XDir,YDir} = randomDir(Ant),
           NewTime = 0,
           FromHive = true
@@ -86,15 +85,16 @@ update(X,Y,Ant,Map,Time)->
 
 
 updatePhermon(FromHive, NewPhermonTimer, Map, X, Y, NewTime) ->
+  PhermonTimer = 0.1,
   if FromHive == true ->
-    if NewPhermonTimer > 1 ->
+    if NewPhermonTimer > PhermonTimer->
       FinalPhermonTimer = 0,
       map:addHivePheromon(Map, X, Y, NewTime);
       true ->
         FinalPhermonTimer = NewPhermonTimer
     end;
     true ->
-      if NewPhermonTimer > 1 ->
+      if NewPhermonTimer > PhermonTimer ->
         FinalPhermonTimer = 0,
         map:addFoodPheromon(Map, X, Y, NewTime);
         true ->
@@ -110,11 +110,9 @@ getXDir(Ant)->
 getYDir(Ant)->
   Ant#ant.yDir.
 
-setXDir(Ant,Dir)->
-  Ant#ant{xDir = Dir}.
+setDir(Ant,XDir,YDir)->
+  Ant#ant{xDir = XDir,yDir = YDir}.
 
-setYDir(Ant,Dir)->
-  Ant#ant{yDir = Dir}.
 
 looking_for_food(Ant)->
   Ant#ant.fromHive.

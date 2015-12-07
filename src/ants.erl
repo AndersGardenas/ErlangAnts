@@ -11,7 +11,7 @@
 
 %% API
 -export([new/3,update/3]).
--import( ant, [newAnt/2,update/2,setXDir/2,setYDir/2,looking_for_food/1]).
+-import( ant, [newAnt/2,update/2,setDir/3,looking_for_food/1]).
 -import(map,[close_to_food/3]).
 
 
@@ -41,14 +41,14 @@ update(Ant,{AntPos,AtomInfo},Map,Time)->
 
 
 getNext(Ant)->
-{[A|AntPos],[I|AntInfo]} = Ant,
-{A,AntPos,I,AntInfo}.
+  {[A|AntPos],[I|AntInfo]} = Ant,
+  {A,AntPos,I,AntInfo}.
 
 
 newPath(X,Y,AntInfo,Map,Time)->
   NewAntInfo = ant:update(X,Y,AntInfo,Map,Time),
 
-  Speed = 10,
+  Speed = 5,
   XDir = ant:getXDir(NewAntInfo),
   YDir = ant:getYDir(NewAntInfo),
   NewX = X + XDir*Time*Speed,
@@ -62,24 +62,26 @@ newPath(X,Y,AntInfo,Map,Time)->
   YMax = map:get_ymax(Map),
 
   if NewX >=  XMax ->
-    AnsX = XMax;
-   % ant:setXDir(NewAntInfo,-XDir);
+    AnsX = XMax,
+    FinalXdir = -XDir;
     NewX <  XMim ->
-      AnsX = XMim;
-    %  ant:setXDir(NewAntInfo,-XDir);
+      AnsX = XMim,
+      FinalXdir = -XDir;
     true ->
-      AnsX = NewX
+      AnsX = NewX,
+      FinalXdir = XDir
   end,
   if NewY >=  YMax ->
-    AnsY = YMax;
-    %ant:setYDir(NewAntInfo,-YDir);
+    AnsY = YMax,
+    FinalYdir = -YDir;
     NewY <  YMin ->
-      AnsY = YMin;
-     % ant:setYDir(NewAntInfo,-YDir);
+      AnsY = YMin,
+      FinalYdir = -YDir;
     true ->
-      AnsY = NewY
+      AnsY = NewY,
+      FinalYdir = YDir
   end,
 
-  {{AnsX, AnsY},NewAntInfo}.
+  {{AnsX, AnsY},ant:setDir(NewAntInfo,FinalXdir,FinalYdir)}.
 
 
