@@ -29,7 +29,7 @@ main() ->
 
 run()->
   io:format("Run has started \n"),
-  receive {init,MasterPid,NrAnts,WorldMax,Start,FoodX,FoodY,NrActors} ->
+  receive {init,MasterPid,NrAnts,WorldMax,Start,Food,NrActors} ->
     io:format("Recived pid ~p \n", [MasterPid]),
     io:format("Recived NrAnts ~p \n", [NrAnts]),
     io:format("Recived WorldMax ~p  \n", [WorldMax]),
@@ -41,8 +41,7 @@ run()->
     WorldMax = 10.0,
     Start = 10.0,
     NrActors = 10,
-    FoodX = 0,
-    FoodY = 0,
+    Food = [],
     throw("out of time ")
   end,
 
@@ -55,7 +54,7 @@ run()->
   %Init world
   StartX = Start,
   StartY = Start,
-  Map = map:new(0,WorldMax,0,WorldMax,[{FoodX,FoodY}],[{StartX,StartY}],HivePhoromon,FoodPhoromon),
+  Map = map:new(0,WorldMax,0,WorldMax,Food,[{StartX,StartY}],HivePhoromon,FoodPhoromon,MasterPid),
 
   Self = self(),
   NrAntPerActor = round(max(NrAnts /NrActors ,1)),
@@ -69,7 +68,7 @@ run()->
 run(Pids,Map,OldTime,MasterPid,PrintFPS) ->
   NewTime =erlang:timestamp(),
   if PrintFPS > 0 ->
-    io:format("Fps is ~p \n", [1000000/timer:now_diff(NewTime,OldTime)]),
+    %  io:format("Fps is ~p \n", [1000000/timer:now_diff(NewTime,OldTime)]),
     NewPrintFPS = 60;
     true ->
       NewPrintFPS = PrintFPS -1
@@ -94,9 +93,11 @@ run(Pids,Map,OldTime,MasterPid,PrintFPS) ->
       end
     end
     ,Refs),
-
-
   map:update(Map,TimeDif),
+
+  receive done ->
+    ok
+  end,
   run(Pids,Map,FinalTime,MasterPid,NewPrintFPS).
 
 %Send a message to a Ant

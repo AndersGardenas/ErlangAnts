@@ -9,7 +9,7 @@
 -module(map).
 -author("anders").
 %% API
--export([new/8,
+-export([new/9,
   home_dir/3,food_dir/3,
   close_to_food/3,close_to_hive/3,update/2,
   addFoodPheromon/4,addHivePheromon/4,
@@ -17,26 +17,47 @@
   get_height/1,get_width/1]).
 
 -record(map,{xmin,xmax,ymin,ymax,width,height,food,hive,
-  hivePheromon,foodPheromon}).
+  hivePheromon,foodPheromon, hiveServer,foodServer}).
 
 -define(HIVESIZE,5*5).
--define(PHEROMONLIFETIME,200).
--define(MAXEMUMSTRENGTH,50).
+-define(PHEROMONLIFETIME,100).
 
-new(Xmin, Xmax,Ymin,Ymax,Food,Hive,HivePheromon,FoodPheromon) ->
+
+new(Xmin, Xmax,Ymin,Ymax,Food,Hive,HivePheromon,FoodPheromon,MasterPid) ->
 
   #map{
     width=round(-Xmin+Xmax),height=round(-Ymin+Ymax),
     xmin = Xmin, xmax =  Xmax, ymin = Ymin, ymax = Ymax,
     food = Food, hive = Hive,
-    hivePheromon = HivePheromon,foodPheromon = FoodPheromon}.
+    hivePheromon = HivePheromon,foodPheromon = FoodPheromon,
+    hiveServer = spawn(fun () -> update_server(HivePheromon,MasterPid,true) end),
+    foodServer = spawn(fun () -> update_server(FoodPheromon,MasterPid,false) end)}.
 
 
 
 update(Map,Time)->
-  updateTable(Map#map.foodPheromon,ets:first(Map#map.foodPheromon),Time),
-  updateTable(Map#map.hivePheromon,ets:first(Map#map.hivePheromon),Time).
 
+  Map#map.hiveServer ! {hive,Time,self()},
+  Map#map.foodServer ! {food,Time,self()},
+  receive _ ->
+    ok
+  after 10000 ->
+    throw("table server does not send")
+  end,
+  receive _ ->
+    ok
+  end.
+
+update_server(Name,MasterPid,MessgeType)->
+  receive {Ref,Time,Self} ->
+    updateTable(Name,ets:first(Name),Time),
+    Self ! Ref
+  after 10000 ->
+    throw("table server does not update")
+  end,
+
+  MasterPid ! {MessgeType,ets:tab2list(Name)},
+  update_server(Name,MasterPid,MessgeType).
 
 updateTable(Name,Key,DeltaT)->
   if Key == '$end_of_table' ->
@@ -62,7 +83,7 @@ addFoodPheromon(Map,X,Y,Time) ->
   addPheromon(Map#map.foodPheromon,round(X),round(Y),Time).
 
 addPheromon(Table,X,Y,Time)->
-  Strength = ?MAXEMUMSTRENGTH - Time,
+  Strength = ?PHEROMONLIFETIME - Time,
   %Only add if the Pheromon is stronger
   Ans = ets:lookup(Table,{X,Y}),
 

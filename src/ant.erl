@@ -18,8 +18,8 @@ addHivePheromon/4,addFoodPheromon/4]).
 -record(ant,{xDir,yDir,time,fromHive,pheromonTimer,directionTimer}).
 
 -define(ANTSPEED,10).
--define(PHOROMONTIMER, 0.5/?ANTSPEED).
--define(IgnoringPheromonChanse,0.2).
+-define(PHOROMONTIMER, 0.2/?ANTSPEED).
+-define(IgnoringPheromonChanse,0.3).
 -define(SAMEDIRECTIONTIME,0.1).
 newAnt(XDir,YDir) ->
   #ant{xDir = XDir,yDir = YDir,time = 0, fromHive = true,pheromonTimer = 0,directionTimer = 0}.
@@ -90,7 +90,7 @@ uppdate_phoromon_direction(Dir, Ant, IgnoringPheromon, X, Y) ->
     {XDir, YDir} = gauss_random_dir(Ant);
     true ->
       if IgnoringPheromon < ?IgnoringPheromonChanse ->
-        {XDir, YDir} = random_dir();
+        {XDir, YDir} = random_dir(Ant);
         true ->
           {FoodXDir, FoodYDir} = Dir,
           XDir = FoodXDir - X,
@@ -164,9 +164,12 @@ gauss_random_dir(Ant)->
   {Ant#ant.xDir + A/5,
     Ant#ant.yDir + B/5}.
 
-random_dir()->
-  {rand:uniform(),
-    rand:uniform()}.
+random_dir(Ant)->
+  {A,B} = gauess_random:get_number(),
+  {Ant#ant.xDir + A/5,
+    Ant#ant.yDir + B/5}.
+ % {rand:uniform(),
+  %  rand:uniform()}.
 
 backwards(Ant) ->
   {-Ant#ant.xDir,
