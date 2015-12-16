@@ -18,7 +18,7 @@
 
 new(N,X,Y)->
   Ants =  [ {X,Y} || _ <- lists:duplicate(N,1)],
-  AntsInfo =  [ ant:newAnt(rand:uniform()*2 -1,rand:uniform()*2 -1) || _ <- lists:duplicate(N,1)],
+  AntsInfo =  [ ant:newAnt(random:uniform()*2 -1,random:uniform()*2 -1) || _ <- lists:duplicate(N,1)],
   {Ants,AntsInfo}.
 
 update(Ant,Map,Time)->

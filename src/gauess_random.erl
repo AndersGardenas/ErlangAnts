@@ -22,8 +22,8 @@
 
 
 get_number() ->
-  X1 = 2.0 * rand:uniform() - 1.0,
-  X2 = 2.0 * rand:uniform() - 1.0,
+  X1 = 2.0 * random:uniform() - 1.0,
+  X2 = 2.0 * random:uniform() - 1.0,
   W = X1 * X1 + X2 * X2,
   if W < 1 ->
     final_number(W,X1,X2);

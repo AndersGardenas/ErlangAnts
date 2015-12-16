@@ -14,8 +14,9 @@
 -import( map, [new/8,update/2]).
 -import(ants,[new/ 3,update/3]).
 
--define(FPS,1/60).
+-define(FPS,1/1000).
 -define(WaintTime,10000).
+-define(BENCHTIME,60).
 
 main() ->
   %% Node = node("clientNode"),
@@ -30,21 +31,21 @@ main() ->
 run()->
   io:format("Run has started \n"),
   receive {init,MasterPid,NrAnts,WorldMax,Start,Food,NrActors} ->
-    io:format("Recived pid ~p \n", [MasterPid]),
-    io:format("Recived NrAnts ~p \n", [NrAnts]),
-    io:format("Recived WorldMax ~p  \n", [WorldMax]),
-    io:format("Recived Start ~p  \n", [Start]),
-    io:format("Recived NrActors ~p  \n", [NrActors])
+    ok
   after ?WaintTime ->
     MasterPid = self(),
-    NrAnts = 10.0,
-    WorldMax = 10.0,
+    NrAnts = 25000,
+    WorldMax = 128,
     Start = 10.0,
-    NrActors = 10,
-    Food = [],
-    throw("out of time ")
+    NrActors = 1,
+    Food = [{100,100}]
   end,
 
+  io:format("Recived pid ~p \n", [MasterPid]),
+  io:format("Recived NrAnts ~p \n", [NrAnts]),
+  io:format("Recived WorldMax ~p  \n", [WorldMax]),
+  io:format("Recived Start ~p  \n", [Start]),
+  io:format("Recived NrActors ~p  \n", [NrActors]),
 
   HivePhoromon = hive,
   FoodPhoromon = food,
@@ -62,17 +63,21 @@ run()->
   io:format("Number of ants per actors is ~p  \n", [NrAntPerActor]),
   Pids = [spawn_link(fun () -> ants(Self, NrAntPerActor,StartX,StartY,Map,MasterPid) end) || _ <- lists:duplicate(NrActors,1)],
 
-  run(Pids,Map, erlang:timestamp(),MasterPid,60).
+  run(Pids,Map, now(),MasterPid,?BENCHTIME,0).
 
 %Main loop
-run(Pids,Map,OldTime,MasterPid,PrintFPS) ->
-  NewTime =erlang:timestamp(),
-  if PrintFPS > 0 ->
-    %  io:format("Fps is ~p \n", [1000000/timer:now_diff(NewTime,OldTime)]),
-    NewPrintFPS = 60;
+run(Pids,Map,OldTime,MasterPid,BenchTime,Frames) ->
+  NewTime =now(),
+
+  if BenchTime < 0 ->
+   % io:format("Frames is ~p \n", [Frames]),
+    NewBench = ?BENCHTIME,
+    NewFrames = 0;
     true ->
-      NewPrintFPS = PrintFPS -1
+      NewBench = BenchTime,
+      NewFrames = Frames
   end,
+
 
   FirstTimeDif = timer:now_diff(NewTime,OldTime)/1000000,
   if(FirstTimeDif < ?FPS)->
@@ -80,11 +85,13 @@ run(Pids,Map,OldTime,MasterPid,PrintFPS) ->
     true ->
       ok
   end,
-  FinalTime = erlang:timestamp(),
+
+
+  FinalTime = now(),
   TimeDif = timer:now_diff(FinalTime,OldTime)/1000000,
 
 
-  %update all ants
+%update all ants
   Refs = [send_message(Pid,TimeDif) || Pid <- Pids],
   lists:foreach(
     fun (Ref) ->
@@ -98,7 +105,7 @@ run(Pids,Map,OldTime,MasterPid,PrintFPS) ->
   receive done ->
     ok
   end,
-  run(Pids,Map,FinalTime,MasterPid,NewPrintFPS).
+  run(Pids,Map,FinalTime,MasterPid,NewBench-TimeDif,NewFrames+1).
 
 %Send a message to a Ant
 send_message(Pid,TimeDif)->

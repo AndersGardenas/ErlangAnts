@@ -48,7 +48,7 @@ update(X,Y,Ant,Map,Time)->
 
 
 findNewDirection(Ant, Map, X, Y, Time) ->
-  IgnoringPheromon = rand:uniform(),
+  IgnoringPheromon = random:uniform(),
   Looking_for_food = ant:looking_for_food(Ant),
   OldTime = Ant#ant.time,
   if Looking_for_food == true ->
